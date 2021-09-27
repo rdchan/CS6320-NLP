@@ -2,7 +2,7 @@ import re
 import sys
 
 import nltk
-import numpy
+import numpy as np
 from nltk.tokenize import sent_tokenize, word_tokenize
 from sklearn.linear_model import LogisticRegression
 
@@ -108,7 +108,7 @@ def get_feature_dictionary(corpus):
 # feature_dict is a dictionary {word: index}
 # Returns a Numpy array
 def vectorize_snippet(snippet, feature_dict):
-    vector = numpy.zeros(len(feature_dict))
+    vector = np.zeros(len(feature_dict))
     for word in snippet:
         vector[feature_dict[word]] = vector[feature_dict[word]] + 1
     return vector
@@ -124,11 +124,13 @@ def vectorize_corpus(corpus, feature_dict):
     # TODO: do
     # x is size n x d, where n is the number of snippets in the corpus (len(corpus))
     # and d is the number of features in the feature_dict (len(feature_dict))
-    x = numpy.empty([len(corpus), len(feature_dict)]) # holds the training feature vectors
+    x = np.empty([len(corpus), len(feature_dict)]) # holds the training feature vectors
     # y is of size n as well
-    y = numpy.empty(len(corpus)) # holds the training feature labels
-    for line, idx in corpus:
+    y = np.empty(len(corpus)) # holds the training feature labels
+    for idx, line in enumerate(corpus):
         # line is a tuple (snippet, label)
+        # print("evalulating ", snippet, "and label", label, "with idx", idx)
+        # print("evalulating ", line, "with idx", idx)
         x[idx,:] = vectorize_snippet(line[0], feature_dict)
         y[idx] = line[1]
     return (x, y)
@@ -139,6 +141,34 @@ def vectorize_corpus(corpus, feature_dict):
 # X is a Numpy array
 # No return value
 def normalize(X):
+    X = X.astype(float)
+    for column_idx in range(len(X.T)):
+        max_value = -np.inf
+        min_value = np.inf
+        for value in X.T[column_idx]:
+            max_value = max(max_value, value)
+            min_value = min(min_value, value)
+        # now replace each value v with \frac{v-min}{max-min}
+        # print("the max is", max_value, "the min is", min_value)
+        for value_idx in range(len(X.T[column_idx])):
+            # X.T[column_idx][value_idx] = (X.T[column_idx][value_idx]-min_value)/(max_value-min_value)
+            print("looking at", X.T[column_idx][value_idx] )
+            # print((X.T[column_idx][value_idx]-min_value)/(max_value-min_value))
+            if (max_value == min_value):
+                # X.T[column_idx][value_idx] = (X.T[column_idx][value_idx]-min_value)/(max_value-min_value)
+                # X[value_idx][column_idx] = 0
+                X.T[column_idx][value_idx] = 0
+            else:
+                print(X.T[column_idx][value_idx])
+                X.T[column_idx][value_idx] = float((1.0*X.T[column_idx][value_idx])-(1.0*min_value))/float((1.0*max_value)-(1.0*min_value))
+                print(X.T[column_idx][value_idx])
+                print(X[value_idx][column_idx])
+            # print((X[value_idx][column_idx]-min_value)/(max_value-min_value))
+    print(X)
+    print(X.T)
+    print("leaving normalize")
+    X[:] = X[:]
+    # WHY IT NO STICK
     pass
 
 
@@ -177,10 +207,15 @@ def main(args):
     corpus = load_corpus('test.txt')
     # snip = ['ice', 'age', 'wo', "n't", 'drop', 'your', 'jaw', ',', 'but', 'it', 'will', 'warm', 'your', 'heart', ',', 'and', 'i', "'m", 'giving', 'it', 'a', 'strong', 'thumbs', 'up', '.']
     f_dict = get_feature_dictionary(corpus)
-    print(f_dict)
+    # print(f_dict)
     # print(tag_negation(snip))
-    print(vectorize_corpus(corpus, f_dict))
+    vectorize_corpus(corpus, f_dict)
     # model, feature_dict = train('train.txt')
+    X = np.array([[1,2,3], [4, 5, 6], [7, 8, 9]])
+    print(X)
+    normalize(X)
+    print(X)
+
 
     # print(test(model, feature_dict, 'test.txt'))
 
