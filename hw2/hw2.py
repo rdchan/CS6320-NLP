@@ -3,6 +3,7 @@ import sys
 
 import nltk
 import numpy
+from nltk.tokenize import sent_tokenize, word_tokenize
 from sklearn.linear_model import LogisticRegression
 
 
@@ -14,6 +15,26 @@ sentence_enders = set(['.', '?', '!', ';'])
 # corpus_path is a string
 # Returns a list of (string, int) tuples
 def load_corpus(corpus_path):
+    corpus_file = open(corpus_path, "r")
+    corpus = corpus_file.read()
+    lines = corpus.split("\n")
+    tokenized_lines = []
+    for line in lines:
+        if (len(line) != 0):
+            tag_split = line.split("\t")
+            # print('***** tag split *****')
+            # print(tag_split)
+            sentence = sent_tokenize(tag_split[0])
+            # print('***sentence***')
+            # print(type(sentence))
+            # print(sentence)
+            words = word_tokenize(sentence[0])
+            # print('**now words***')
+            # print(type(words))
+            # print(words)
+            tokenized_lines.append((words, int(tag_split[1])))
+            # print((words, int(tag_split[1])))
+    return tokenized_lines
     pass
 
 
@@ -21,6 +42,11 @@ def load_corpus(corpus_path):
 # word is a string
 # Returns a boolean
 def is_negation(word):
+    if (word in negation_words):
+        return True
+    if (word[-3:] == "n\'t"):
+        return True
+    return False
     pass
 
 
@@ -28,6 +54,37 @@ def is_negation(word):
 # snippet is a list of strings
 # Returns a list of strings
 def tag_negation(snippet):
+    single_string = " ".join(snippet)
+    # tagged = nltk.pos_tag(single_string)
+    tagged = nltk.pos_tag(snippet)
+    print(snippet)
+    print(single_string)
+    print(tagged)
+    tagged_snippet = []
+    currently_negated = False
+    check_not_only = False
+    for word in snippet:
+        if (word == "not"):
+            check_not_only = True
+        if (check_not_only):
+            check_not_only = False
+            if (word == "only"):
+                currently_negated = False
+        if is_negation(word):
+            currently_negated = True
+            tagged_snippet.append(word)
+        else:
+            if (word in negation_enders):
+                currently_negated = False
+                tagged_snippet.append(word)
+            else:
+                if(currently_negated):
+                    tagged_snippet.append("NOT_" + word)
+                else:
+                    tagged_snippet.append(word)
+
+    return tagged_snippet
+
     pass
 
 
@@ -35,6 +92,15 @@ def tag_negation(snippet):
 # corpus is a list of tuples (snippet, label)
 # Returns a dictionary {word: index}
 def get_feature_dictionary(corpus):
+    position_idx = 0
+    dictionary = {}
+    for item in corpus:
+        snippet = item[0]
+        for word in snippet:
+            if not word in dictionary:
+                dictionary[word] = position_idx
+                position_idx = position_idx + 1
+    return dictionary
     pass
 
 # Converts a snippet into a feature vector
@@ -42,6 +108,10 @@ def get_feature_dictionary(corpus):
 # feature_dict is a dictionary {word: index}
 # Returns a Numpy array
 def vectorize_snippet(snippet, feature_dict):
+    vector = numpy.zeros(len(feature_dict))
+    for word in snippet:
+        vector[feature_dict[word]] = vector[feature_dict[word]] + 1
+    return vector
     pass
 
 
@@ -50,6 +120,18 @@ def vectorize_snippet(snippet, feature_dict):
 # feature_dict is a dictionary {word: label}
 # Returns a tuple (X, Y) where X and Y are Numpy arrays
 def vectorize_corpus(corpus, feature_dict):
+
+    # TODO: do
+    # x is size n x d, where n is the number of snippets in the corpus (len(corpus))
+    # and d is the number of features in the feature_dict (len(feature_dict))
+    x = numpy.empty([len(corpus), len(feature_dict)]) # holds the training feature vectors
+    # y is of size n as well
+    y = numpy.empty(len(corpus)) # holds the training feature labels
+    for line, idx in corpus:
+        # line is a tuple (snippet, label)
+        x[idx,:] = vectorize_snippet(line[0], feature_dict)
+        y[idx] = line[1]
+    return (x, y)
     pass
 
 
@@ -92,13 +174,18 @@ def get_top_features(logreg_model, feature_dict, k=1):
 
 
 def main(args):
-    model, feature_dict = train('train.txt')
+    corpus = load_corpus('test.txt')
+    # snip = ['ice', 'age', 'wo', "n't", 'drop', 'your', 'jaw', ',', 'but', 'it', 'will', 'warm', 'your', 'heart', ',', 'and', 'i', "'m", 'giving', 'it', 'a', 'strong', 'thumbs', 'up', '.']
+    f_dict = get_feature_dictionary(corpus)
+    print(f_dict)
+    # print(tag_negation(snip))
+    print(vectorize_corpus(corpus, f_dict))
+    # model, feature_dict = train('train.txt')
 
-    print(test(model, feature_dict, 'test.txt'))
+    # print(test(model, feature_dict, 'test.txt'))
 
-    weights = get_top_features(model, feature_dict)
-    for weight in weights:
-        print(weight)
-    
+    # weights = get_top_features(model, feature_dict)
+    # for weight in weights:
+    #     print(weight)
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
