@@ -1,0 +1,124 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+\setlist[enumerate]{noitemsep, topsep=0pt}
+\setlist[itemize]{noitemsep, topsep=0pt}
+
+\usepackage{fullpage}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\setlength\parindent{0pt}
+
+\begin{document}
+\pagestyle{empty}
+
+\textbf{CS 6320.002: Natural Language Processing} \\
+\textbf{Fall 2021} \\
+
+\textbf{Homework 2 Written Component --- 45 points} \\
+\textbf{Issued 15 Sept. 2021} \\
+\textbf{Due 11:59pm CDT 29 Sept. 2021} \\
+
+\textbf{Deliverables:} Answers can be typed directly into Gradescope. See the assignment guide for more details.
+
+\vspace{\baselineskip}
+
+\textbf{What does it mean to ``show your work?"} Write out the math step-by-step; we should be able to clearly follow your reasoning from one step to another. (You can combine ``obvious" steps like simplifying fractions or doing basic arithmetic.) The point of showing your work is twofold: to get partial credit if your answer is incorrect, and to show us that you worked the problem yourself and understand it. We will deduct points if steps are missing.
+
+\section{Sentiment Analysis \& Classification}
+
+The problems in this section are based on the material covered in Week 3.
+
+\subsection{Naive Bayes --- 10 points}
+
+We have a training corpus consisting of three sentences and their labels:
+\begin{itemize}
+\item The cat sat in the hat, 1
+\item The dog sat on the log, 1
+\item The fish sat in the dish, 0
+\end{itemize}
+
+\vspace{\baselineskip}
+
+\textbf{A.} Suppose we train a Naive Bayes classifier on this corpus, using maximum likelihood estimation and unigram count features without any smoothing. What are the values of the parameters $p(c)$ and $p(f|c)$ for all classes $c$ and features $f$? You can simply list the parameters and their values; no need to show the arithmetic. You can skip parameters with value 0, and you can leave your answers as fractions. 
+
+\vspace{\baselineskip}
+
+\textbf{B.} What class would our Naive Bayes classifier predict for the test sentence ``The cat sat"? Show your work, ie. show the calculations for the predicted probabilities of both classes.
+
+
+\subsection{Logistic Regression --- 5 points}
+
+The last step of the programming component asks you to get the top $k$ most important features for your sentiment classifier. When doing this, why do we sort by absolute value? Explain why we do this rather than sorting by the raw weight values (1-2 sentences).
+
+\subsection{Gradient Descent --- 5 points}
+
+Suppose you are training a model using stochastic gradient descent, and you have a held-out validation set to check the performance of your model. Your loss function gives the following values on the training and validation sets as you train:
+\begin{center}
+\begin{tabular}{c c c}
+\toprule
+Training Steps & Training Loss & Validation Loss \\
+\midrule
+100 & 0.9494 & 0.9952 \\
+200 & 0.8652 & 0.8921 \\
+300 & 0.7345 & 0.7671 \\
+400 & 0.6253 & 0.6937 \\
+500 & 0.5145 & 0.5877 \\
+600 & 0.4112 & 0.4514 \\
+700 & 0.3434 & 0.4528 \\
+800 & 0.2346 & 0.4698 \\
+900 & 0.1384 & 0.4745 \\
+1000 & 0.1261 & 0.4778 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+You have saved a copy of your model every 100 training steps. Which of the 10 saved models should you use for testing? Explain your answer (1-2 sentences).
+
+\section{Part-of-Speech Tagging}
+
+The problems in this section are based on the material covered in Week 5.
+
+\subsection{HMMs and the Viterbi Algorithm --- 10 points}
+
+Suppose we have a training corpus consisting of two tagged sentences:
+\begin{itemize}
+\item
+\begin{tabular}{c c c c c c}
+The & can & is & in & the & drawer \\
+DT & NN & VB & PP & DT & NN
+\end{tabular}
+\item
+\begin{tabular}{c c c c c c}
+The & cat & can & see & the & fish \\
+DT & NN & VB & VB & DT & NN
+\end{tabular}
+\end{itemize}
+
+\vspace{\baselineskip}
+
+\textbf{A.} Suppose we train a simple HMM part-of-speech tagger on this corpus, using maximum likelihood estimation, bigram tag transition probabilities, and a single meta-tag {\tt <s>} (the start tag). What are the values of the parameters $p(t_i | t_{i-1})$ and $p(w_i | t_i)$ for all tags $t$ and words $w$? You can simply list the parameters and their values; no need to show the arithmetic. You can skip parameters with value 0, and you can leave your answers as fractions.
+
+\vspace{\baselineskip}
+
+\textbf{B.} What parts of speech would the trained HMM tagger in the previous problem predict for the test sentence ``The fish can see the can," using Viterbi decoding? Show your work, ie. the dynamic programming table $V$. You can leave your answers as fractions.
+
+\vspace{\baselineskip}
+
+\subsection{The Viterbi Algorithm --- 5 points} 
+
+Suppose we have an HMM tagger that uses 4-gram tag transition probabilities, ie. the parameters are $p(t_i | t_{i-1}, t_{i-2}, t_{i-3})$ and $p(w_i | t_i)$. Let $T$ be the number of tags in the tagset, and let $n$ be the length of the input sequence to be tagged. What is the runtime, in big-$O$, of the vanilla Viterbi algorithm for this HMM? What is the runtime if we use beam search Viterbi with beam size $k$? Briefly explain your answers (a single sentence is fine).
+
+\subsection{Tagsets --- 5 points}
+
+The Penn Treebank tagset is not the only one out there; there is also the Universal Dependencies tagset, which has less than half as many tags. For example, instead of a different tag for each tense of verb, Universal Dependencies has a single tag for all verbs, regardless of their tense. What are some advantages and disadvantages of using a smaller tagset, as opposed to a larger one? Give at least one advantage and one disadvantage and briefly explain (a single sentence each is fine).
+
+\subsection{MEMMs and Feature Engineering --- 5 points}
+
+Another powerful feature type for part-of-speech tagging MEMMs, in addition to word and tag n-grams, are word and tag \textit{skip-grams}. For example, from the sequence ``The sleepy dog", we can get two bigrams, {\tt (the, sleepy)} and {\tt (sleepy, dog)}; one trigram, {\tt (the, sleepy, dog)}; and one skip-gram, {\tt (the, dog)}. Why do we use skip-grams when we already have bigrams and trigrams? What advantages do skip-gram features offer? Give at least one advantage and briefly explain (a single sentence is fine).
+
+\end{document}
