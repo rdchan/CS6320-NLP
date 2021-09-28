@@ -15,25 +15,16 @@ sentence_enders = set(['.', '?', '!', ';'])
 # corpus_path is a string
 # Returns a list of (string, int) tuples
 def load_corpus(corpus_path):
-    corpus_file = open(corpus_path, "r")
+    corpus_file = open(corpus_path, 'r', encoding="ISO-8859-1")
     corpus = corpus_file.read()
     lines = corpus.split("\n")
     tokenized_lines = []
     for line in lines:
         if (len(line) != 0):
             tag_split = line.split("\t")
-            # print('***** tag split *****')
-            # print(tag_split)
             sentence = sent_tokenize(tag_split[0])
-            # print('***sentence***')
-            # print(type(sentence))
-            # print(sentence)
             words = word_tokenize(sentence[0])
-            # print('**now words***')
-            # print(type(words))
-            # print(words)
             tokenized_lines.append((words, int(tag_split[1])))
-            # print((words, int(tag_split[1])))
     return tokenized_lines
     pass
 
@@ -57,9 +48,6 @@ def tag_negation(snippet):
     single_string = " ".join(snippet)
     # tagged = nltk.pos_tag(single_string)
     tagged = nltk.pos_tag(snippet)
-    print(snippet)
-    print(single_string)
-    print(tagged)
     tagged_snippet = []
     currently_negated = False
     check_not_only = False
@@ -82,9 +70,7 @@ def tag_negation(snippet):
                     tagged_snippet.append("NOT_" + word)
                 else:
                     tagged_snippet.append(word)
-
     return tagged_snippet
-
     pass
 
 
@@ -110,7 +96,8 @@ def get_feature_dictionary(corpus):
 def vectorize_snippet(snippet, feature_dict):
     vector = np.zeros(len(feature_dict))
     for word in snippet:
-        vector[feature_dict[word]] = vector[feature_dict[word]] + 1
+        if word in feature_dict:
+            vector[feature_dict[word]] = vector[feature_dict[word]] + 1
     return vector
     pass
 
@@ -120,8 +107,6 @@ def vectorize_snippet(snippet, feature_dict):
 # feature_dict is a dictionary {word: label}
 # Returns a tuple (X, Y) where X and Y are Numpy arrays
 def vectorize_corpus(corpus, feature_dict):
-
-    # TODO: do
     # x is size n x d, where n is the number of snippets in the corpus (len(corpus))
     # and d is the number of features in the feature_dict (len(feature_dict))
     x = np.empty([len(corpus), len(feature_dict)]) # holds the training feature vectors
@@ -129,8 +114,6 @@ def vectorize_corpus(corpus, feature_dict):
     y = np.empty(len(corpus)) # holds the training feature labels
     for idx, line in enumerate(corpus):
         # line is a tuple (snippet, label)
-        # print("evalulating ", snippet, "and label", label, "with idx", idx)
-        # print("evalulating ", line, "with idx", idx)
         x[idx,:] = vectorize_snippet(line[0], feature_dict)
         y[idx] = line[1]
     return (x, y)
@@ -141,34 +124,23 @@ def vectorize_corpus(corpus, feature_dict):
 # X is a Numpy array
 # No return value
 def normalize(X):
-    X = X.astype(float)
-    for column_idx in range(len(X.T)):
+    X2 = X.astype(float)
+    # X.astype(np.float)
+    for column_idx in range(len(X2.T)):
         max_value = -np.inf
         min_value = np.inf
-        for value in X.T[column_idx]:
+        for value in X2.T[column_idx]:
             max_value = max(max_value, value)
             min_value = min(min_value, value)
         # now replace each value v with \frac{v-min}{max-min}
-        # print("the max is", max_value, "the min is", min_value)
-        for value_idx in range(len(X.T[column_idx])):
-            # X.T[column_idx][value_idx] = (X.T[column_idx][value_idx]-min_value)/(max_value-min_value)
-            print("looking at", X.T[column_idx][value_idx] )
-            # print((X.T[column_idx][value_idx]-min_value)/(max_value-min_value))
+        for value_idx in range(len(X2.T[column_idx])):
             if (max_value == min_value):
-                # X.T[column_idx][value_idx] = (X.T[column_idx][value_idx]-min_value)/(max_value-min_value)
-                # X[value_idx][column_idx] = 0
-                X.T[column_idx][value_idx] = 0
+                X2.T[column_idx][value_idx] = 0
             else:
-                print(X.T[column_idx][value_idx])
-                X.T[column_idx][value_idx] = float((1.0*X.T[column_idx][value_idx])-(1.0*min_value))/float((1.0*max_value)-(1.0*min_value))
-                print(X.T[column_idx][value_idx])
-                print(X[value_idx][column_idx])
-            # print((X[value_idx][column_idx]-min_value)/(max_value-min_value))
-    print(X)
-    print(X.T)
-    print("leaving normalize")
-    X[:] = X[:]
-    # WHY IT NO STICK
+                X2.T[column_idx][value_idx] = float((1.0*X2.T[column_idx][value_idx])-(1.0*min_value))/float((1.0*max_value)-(1.0*min_value))
+    for i in range(len(X2)):
+        for j in range(len(X2[i])):
+            X[i][j] = float(1.0*X2[i][j])
     pass
 
 
@@ -176,6 +148,15 @@ def normalize(X):
 # corpus_path is a string
 # Returns a LogisticRegression
 def train(corpus_path):
+    corpus = load_corpus(corpus_path)
+    tag_negated_corpus = []
+    for snippet, label in corpus:
+        tag_negated_corpus.append((tag_negation(snippet), label))
+    f_dict = get_feature_dictionary(tag_negated_corpus)
+    X, Y = vectorize_corpus(tag_negated_corpus, f_dict)
+    lrmodel = LogisticRegression()
+    lrmodel.fit(X, Y)
+    return (lrmodel, f_dict)
     pass
 
 
@@ -184,6 +165,30 @@ def train(corpus_path):
 # Y_test is a Numpy array
 # Returns a tuple of floats
 def evaluate_predictions(Y_pred, Y_test):
+    tp = fp = fn = 0
+    if(len(Y_pred) != len(Y_test)):
+        print("Size mismatch")
+        return
+    for idx in range(len(Y_pred)):
+        if(Y_pred[idx] == 1 and Y_test[idx] == 1):
+            tp += 1
+        if(Y_pred[idx] == 1 and Y_test[idx] == 0):
+            fp += 1
+        if(Y_pred[idx] == 0 and Y_test[idx] == 1):
+            fn += 1
+    if((tp+fp) != 0):
+        p = float(tp/(tp+fp))
+    else:
+        p = 0
+    if((tp+fn) != 0):
+        r = float(tp/(tp+fn))
+    else:
+        r = 0
+    if((p+r) != 0):
+        f = float(2*((p*r)/(p+r)))
+    else:
+        f = 0
+    return (p, r, f)
     pass
 
 
@@ -192,6 +197,14 @@ def evaluate_predictions(Y_pred, Y_test):
 # corpus_path is a string
 # Returns a tuple of floats
 def test(model, feature_dict, corpus_path):
+    corpus = load_corpus(corpus_path)
+    tag_negated_corpus = []
+    for snippet, label in corpus:
+        tag_negated_corpus.append((tag_negation(snippet), label))
+    X, Y = vectorize_corpus(tag_negated_corpus, feature_dict)
+    normalize(X)
+    Y_pred = model.predict(X)
+    return evaluate_predictions(Y_pred, Y)
     pass
 
 
@@ -200,27 +213,25 @@ def test(model, feature_dict, corpus_path):
 # feature_dict is a dictionary {word: index}
 # k is an int
 def get_top_features(logreg_model, feature_dict, k=1):
+    feature_weights = []
+    for idx in range(len(logreg_model.coef_[0])):
+        feature_weights.append((idx, logreg_model.coef_[0][idx]))
+    feature_weights.sort(key=lambda y: abs(y[1]), reverse=True)
+    words = []
+    counter = 0
+    for idx, coef in feature_weights:
+        if counter == k:
+            break
+        words.append((list(feature_dict.keys())[list(feature_dict.values()).index(idx)], coef))
+        counter += 1
+    return words
     pass
 
-
 def main(args):
-    corpus = load_corpus('test.txt')
-    # snip = ['ice', 'age', 'wo', "n't", 'drop', 'your', 'jaw', ',', 'but', 'it', 'will', 'warm', 'your', 'heart', ',', 'and', 'i', "'m", 'giving', 'it', 'a', 'strong', 'thumbs', 'up', '.']
-    f_dict = get_feature_dictionary(corpus)
-    # print(f_dict)
-    # print(tag_negation(snip))
-    vectorize_corpus(corpus, f_dict)
-    # model, feature_dict = train('train.txt')
-    X = np.array([[1,2,3], [4, 5, 6], [7, 8, 9]])
-    print(X)
-    normalize(X)
-    print(X)
-
-
-    # print(test(model, feature_dict, 'test.txt'))
-
-    # weights = get_top_features(model, feature_dict)
-    # for weight in weights:
-    #     print(weight)
+    model, feature_dict = (train('Train.txt'))
+    print(test(model, feature_dict, 'test.txt'))
+    weights = get_top_features(model, feature_dict)
+    for weight in weights:
+        print(weight)
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
