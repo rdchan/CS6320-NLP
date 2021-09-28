@@ -73,7 +73,6 @@ def tag_negation(snippet):
     return tagged_snippet
     pass
 
-
 # Assigns to each unigram an index in the feature vector
 # corpus is a list of tuples (snippet, label)
 # Returns a dictionary {word: index}
