@@ -99,7 +99,6 @@ def remove_rare_features(corpus_features, threshold=5):
     rare_features = set()
     common_features = set()
     feature_counts = {}
-    print(corpus_features[0][0])
     for sentence in corpus_features:
         for word_feature_list in sentence:
             for feature in word_feature_list:
@@ -147,6 +146,7 @@ def build_Y(corpus_tags, tag_dict):
         for tag in sentence:
             Y.append(tag_dict[tag])
     Y = numpy.array(Y)
+    print("build y length", len(Y))
     return Y
     pass
 
@@ -163,6 +163,7 @@ def build_X(corpus_features, feature_dict):
                 rows.append(idx)
                 cols.append(feature_dict[feature])
     values = [1] * len(rows)
+    print("build x rows", len(rows))
     rows =numpy.array(rows)
     cols =numpy.array(cols)
     values =numpy.array(values)
@@ -176,7 +177,30 @@ def build_X(corpus_features, feature_dict):
 # Returns a tuple (model, feature_dict, tag_dict)
 def train(proportion=1.0):
     corpus_sentences, corpus_tags = load_training_corpus(proportion)
-    # TODO do
+    # corpus_features is a list of lists of feature lists
+    # it is a list of sentences
+    # the sentences are a list of lists, each corresponding to a word
+    # the sublists are the word features
+    corpus_features = []
+    for sentence in corpus_sentences:
+        sentence_features = []
+        prevtag = '<s>'
+        for idx, word in enumerate(sentence):
+            word_features = get_features(sentence, idx, prevtag)
+            prevtag = word
+            sentence_features.append(word_features)
+        corpus_features.append(sentence_features)
+
+    corpus_features, common_features =  remove_rare_features(corpus_features)
+    feature_dict, tag_dict = get_feature_and_label_dictionaries(common_features, corpus_tags)
+    Y = build_Y(corpus_tags, tag_dict)
+    X = build_X(corpus_features, feature_dict)
+    # print('tain deb')
+    # # print(type(X))
+    print(X.shape)
+    lrmodel = LogisticRegression(class_weight='balanced', solver='saga', multi_class='multinomial')
+    # lrmodel.fit(X, Y)
+    return (lrmodel, feature_dict, tag_dict)
     pass
 
 
@@ -219,7 +243,7 @@ def predict(corpus_path, model, feature_dict, tag_dict):
 
 
 def main(args):
-    # model, feature_dict, tag_dict = train(0.25)
+    model, feature_dict, tag_dict = train(0.25)
     # print(get_features(['the', 'Happy', 'cAt-1'], 2, 'cAt-1'))
 
     # print(remove_rare_features([['a', 'e', 'b', 'c'], ['a', 'b', 'd']], 2))
@@ -228,8 +252,8 @@ def main(args):
     # common_features is a set of strings
     # corpus_tags is a list of lists of strings (tags)
     # Returns a tuple (feature_dict, tag_dict)
-    print(get_feature_and_label_dictionaries(['a', 'b', 'c', 'd'], [['tag1', 'tag2', 'tag1'], ['tag4', 'tag3']]))
-    print(build_X([['a', 'b', 'c'], ['b', 'a', 'd']], {'a': 1, 'b': 2, 'c': 3, 'd': 4}))
+    # print(get_feature_and_label_dictionaries(['a', 'b', 'c', 'd'], [['tag1', 'tag2', 'tag1'], ['tag4', 'tag3']]))
+    # print(build_X([['a', 'b', 'c'], ['b', 'a', 'd']], {'a': 1, 'b': 2, 'c': 3, 'd': 4}))
     # predictions = predict('test.txt', model, feature_dict, tag_dict)
     # for test_sent in predictions:
     #     print(test_sent)
