@@ -142,11 +142,13 @@ def get_feature_and_label_dictionaries(common_features, corpus_tags):
 # Returns a Numpy array
 def build_Y(corpus_tags, tag_dict):
     Y = []
+    count = 0
     for sentence in corpus_tags:
+        # print(sentence)
+        count += 1
         for tag in sentence:
             Y.append(tag_dict[tag])
     Y = numpy.array(Y)
-    print("build y length", len(Y))
     return Y
     pass
 
@@ -157,18 +159,20 @@ def build_Y(corpus_tags, tag_dict):
 def build_X(corpus_features, feature_dict):
     rows = []
     cols = []
-    for idx, sentence in enumerate(corpus_features):
+    count = 0
+    for sentence in corpus_features:
         for word in sentence:
             for feature in word:
-                rows.append(idx)
-                cols.append(feature_dict[feature])
+                if feature in feature_dict:
+                    rows.append(count)
+                    cols.append(feature_dict[feature])
+                # cols.append(feature_dict.get(feature, 0))
+            count += 1
     values = [1] * len(rows)
-    print("build x rows", len(rows))
     rows =numpy.array(rows)
     cols =numpy.array(cols)
     values =numpy.array(values)
     return csr_matrix((values, (rows, cols)))
-
     pass
 
 
@@ -181,6 +185,7 @@ def train(proportion=1.0):
     # it is a list of sentences
     # the sentences are a list of lists, each corresponding to a word
     # the sublists are the word features
+    #[ [ ['word1feature1', 'word1feature2'], ['word2feature1', 'word2feature2']], [['sent2w1f1'], ['sent2w2f1']]]
     corpus_features = []
     for sentence in corpus_sentences:
         sentence_features = []
@@ -195,15 +200,10 @@ def train(proportion=1.0):
     feature_dict, tag_dict = get_feature_and_label_dictionaries(common_features, corpus_tags)
     Y = build_Y(corpus_tags, tag_dict)
     X = build_X(corpus_features, feature_dict)
-    # print('tain deb')
-    # # print(type(X))
-    print(X.shape)
     lrmodel = LogisticRegression(class_weight='balanced', solver='saga', multi_class='multinomial')
-    # lrmodel.fit(X, Y)
+    lrmodel.fit(X, Y)
     return (lrmodel, feature_dict, tag_dict)
     pass
-
-
 
 # Load the test set
 # corpus_path is a string
@@ -221,6 +221,24 @@ def load_test_corpus(corpus_path):
 # reverse_tag_dict is a dictionary {int: string}
 # Returns a tuple (Y_start, Y_pred)
 def get_predictions(test_sent, model, feature_dict, reverse_tag_dict):
+    Y_pred = numpy.empty(shape=(len(test_sent)-1, len(reverse_tag_dict), len(reverse_tag_dict)))
+    for idx, word in enumerate(test_sent):
+        if (idx == 0):
+            continue
+        features = []
+        # for tag in reverse_tag_dict.keys():
+        for tag in reverse_tag_dict.values():
+            features.append(get_features(test_sent, idx, str(tag)))
+        X = build_X([features], feature_dict)
+        print('X should be of size', len(reverse_tag_dict), 'by', len(feature_dict))
+        print(X.shape)
+        T = model.predict_log_proba(X)
+        Y_pred[idx] = T
+    features = []
+    features.append(get_features(test_sent, idx, '<s>'))
+    X = build_X([features], feature_dict)
+    Y_start = model.predict_log_proba(X)
+    return (Y_start, Y_pred)
     pass
 
 
@@ -229,6 +247,30 @@ def get_predictions(test_sent, model, feature_dict, reverse_tag_dict):
 # Y_pred is a Numpy array of size (n-1, T, T)
 # Returns a list of strings (tags)
 def viterbi(Y_start, Y_pred):
+    N, T, _ = Y_pred.shape
+    N += 1
+
+    V = numpy.empty(shape=(N, T))
+    BP = numpy.empty(shape=(N, T))
+
+    V[0] = Y_start
+
+    for word_idx in range(1, N):
+        for tag_idx in range(T):
+            explore_value_list = numpy.empty(T)
+            for node in range(T):
+                explore_value_list[node] = V[word_idx][node] + Y_pred[word_idx-1][node][tag_idx]
+            V[word_idx][tag_idx] = max(explore_value_list)
+            BP[word_idx][tag_idx] = numpy.argmax(explore_value_list)
+
+    tags = []
+    tag_on_path = int(numpy.argmax(V[N-1]))
+    for word_idx_offset in range(N):
+        pos_idx = N-1-word_idx_offset
+        tags.insert(0, tag_on_path)
+        tag_on_path = BP[pos_idx][tag_on_path]
+
+    return tags
     pass
 
 
@@ -243,17 +285,11 @@ def predict(corpus_path, model, feature_dict, tag_dict):
 
 
 def main(args):
-    model, feature_dict, tag_dict = train(0.25)
-    # print(get_features(['the', 'Happy', 'cAt-1'], 2, 'cAt-1'))
+    model, feature_dict, tag_dict = train(0.05)
+    # print("made the model!")
+    print(get_predictions(['county', 'is', 'early'], model, feature_dict, tag_dict))
+    # print("good")
 
-    # print(remove_rare_features([['a', 'e', 'b', 'c'], ['a', 'b', 'd']], 2))
-    # print(remove_rare_features([[get_features(['the', 'happy', 'the', 'happy', 'happy', 'cat'], i, 'prev') for i in range(0, 6)]], 2))
-    # Build feature and tag dictionaries
-    # common_features is a set of strings
-    # corpus_tags is a list of lists of strings (tags)
-    # Returns a tuple (feature_dict, tag_dict)
-    # print(get_feature_and_label_dictionaries(['a', 'b', 'c', 'd'], [['tag1', 'tag2', 'tag1'], ['tag4', 'tag3']]))
-    # print(build_X([['a', 'b', 'c'], ['b', 'a', 'd']], {'a': 1, 'b': 2, 'c': 3, 'd': 4}))
     # predictions = predict('test.txt', model, feature_dict, tag_dict)
     # for test_sent in predictions:
     #     print(test_sent)
