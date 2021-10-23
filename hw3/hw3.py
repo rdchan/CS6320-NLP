@@ -166,12 +166,14 @@ def build_X(corpus_features, feature_dict):
                 if feature in feature_dict:
                     rows.append(count)
                     cols.append(feature_dict[feature])
-                # cols.append(feature_dict.get(feature, 0))
+                else:
+                    rows.append(count)
+                    cols.append(len(feature_dict)-1)
             count += 1
     values = [1] * len(rows)
-    rows =numpy.array(rows)
-    cols =numpy.array(cols)
-    values =numpy.array(values)
+    rows = numpy.array(rows)
+    cols = numpy.array(cols)
+    values = numpy.array(values)
     return csr_matrix((values, (rows, cols)))
     pass
 
@@ -230,10 +232,10 @@ def get_predictions(test_sent, model, feature_dict, reverse_tag_dict):
         for tag in reverse_tag_dict.values():
             features.append(get_features(test_sent, idx, str(tag)))
         X = build_X([features], feature_dict)
-        print('X should be of size', len(reverse_tag_dict), 'by', len(feature_dict))
-        print(X.shape)
+        # print('X should be of size', len(reverse_tag_dict), 'by', len(feature_dict))
+        # print(X.shape)
         T = model.predict_log_proba(X)
-        Y_pred[idx] = T
+        Y_pred[idx-1] = T
     features = []
     features.append(get_features(test_sent, idx, '<s>'))
     X = build_X([features], feature_dict)
@@ -253,25 +255,25 @@ def viterbi(Y_start, Y_pred):
     V = numpy.empty(shape=(N, T))
     BP = numpy.empty(shape=(N, T))
 
-    V[0] = Y_start
-
+    V[0] = Y_start[0]
+    BP[0] = -1
     for word_idx in range(1, N):
         for tag_idx in range(T):
-            explore_value_list = numpy.empty(T)
-            for node in range(T):
-                explore_value_list[node] = V[word_idx][node] + Y_pred[word_idx-1][node][tag_idx]
-            V[word_idx][tag_idx] = max(explore_value_list)
-            BP[word_idx][tag_idx] = numpy.argmax(explore_value_list)
+            list_of_values = [Y_pred[word_idx-1][tag_idx][k]+V[word_idx-1][k] for k in range(T)]
+            maximum_value = numpy.max(list_of_values)
+            maximum_index = numpy.argmax(list_of_values)
+            V[word_idx][tag_idx] = maximum_value
+            BP[word_idx][tag_idx] = maximum_index
 
     tags = []
     tag_on_path = int(numpy.argmax(V[N-1]))
-    for word_idx_offset in range(N):
-        pos_idx = N-1-word_idx_offset
+    # for word_idx_offset in range(N):
+    for word_idx_offset in reversed(range(1, N)):
         tags.insert(0, tag_on_path)
-        tag_on_path = BP[pos_idx][tag_on_path]
-
+        # print("pos_idx:", pos_idx, "tagonpath", tag_on_path)
+        tag_on_path = int(BP[word_idx_offset][tag_on_path])
     return tags
-    pass
+
 
 
 # Predict tags for a test corpus using a trained model
@@ -281,18 +283,27 @@ def viterbi(Y_start, Y_pred):
 # tag_dict is a dictionary {string: int}
 # Returns a list of lists of strings (tags)
 def predict(corpus_path, model, feature_dict, tag_dict):
+    sentences = load_test_corpus(corpus_path)
+    reverse_tag_dict = dict([(value, key) for key, value in tag_dict.items()])
+    predicted_corpus_tags = []
+    for sentence in sentences:
+        Y_start, Y_pred = get_predictions(sentence, model, feature_dict, reverse_tag_dict)
+        predicted_sentence_indices = viterbi(Y_start, Y_pred)
+        predicted_sentence_tags = [reverse_tag_dict[idx] for idx in predicted_sentence_indices]
+        predicted_corpus_tags.append(predicted_sentence_tags)
+    return predicted_corpus_tags
     pass
 
 
 def main(args):
     model, feature_dict, tag_dict = train(0.05)
     # print("made the model!")
-    print(get_predictions(['county', 'is', 'early'], model, feature_dict, tag_dict))
+    # print(get_predictions(['county', 'is', 'early'], model, feature_dict, tag_dict))
     # print("good")
 
-    # predictions = predict('test.txt', model, feature_dict, tag_dict)
-    # for test_sent in predictions:
-    #     print(test_sent)
+    predictions = predict('test.txt', model, feature_dict, tag_dict)
+    for test_sent in predictions:
+        print(test_sent)
 
 
 if __name__ == '__main__':
