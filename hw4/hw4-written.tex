@@ -1,0 +1,197 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+
+\usepackage{enumitem}
+\setlist[enumerate]{noitemsep, topsep=0pt}
+\setlist[itemize]{noitemsep, topsep=0pt}
+
+\usepackage{fullpage}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\usepackage{tikz}
+\usepackage{tikz-qtree}
+
+\setlength\parindent{0pt}
+
+\begin{document}
+\pagestyle{empty}
+
+\textbf{CS 6320.002: Natural Language Processing} \\
+\textbf{Fall 2020} \\
+
+\textbf{Homework 4 --- 45 points} \\
+\textbf{Issued 01 Nov. 2021} \\
+\textbf{Due 11:59pm 15 Nov. 2020} \\
+
+\textbf{Deliverables:} Answers can be typed directly into Gradescope. See the assignment guide for more details.
+
+\vspace{\baselineskip}
+
+\textbf{What does it mean to ``show your work?"} Write out the math step-by-step; we should be able to clearly follow your reasoning from one step to another. (You can combine ``obvious" steps like simplifying fractions or doing basic arithmetic.) The point of showing your work is twofold: to get partial credit if your answer is incorrect, and to show us that you worked the problem yourself and understand it. We will deduct points if steps are missing.
+
+\section{Semantic Role Labeling --- 10 points}
+
+The questions in this section are based on material covered in Week 10.
+
+\subsection{}
+
+Identify the predicate, the arguments, and the semantic role of each argument in the following sentences:
+
+\begin{itemize}
+\item Alice hid the key in a flowerpot.
+\item The cold weather killed Bob's rosebushes.
+\item Eve picked the lock with a paper clip.
+\end{itemize}
+
+You can assume that there is only one predicate per sentence. Use the set of semantic role labels from lecture.
+
+\subsection{}
+
+Convert the following predicate-argument structures into English sentences:
+
+\begin{itemize}
+\item sank(submarine - agent, battleship - theme, torpedo - instrument)
+\item booked(Alice - agent, plane ticket - theme, Bob - beneficiary)
+\item walked(Eve - agent, McDermott Library - source, ECSS - goal)
+\end{itemize}
+
+Write two different sentences for each predicate-argument structure.
+
+\pagebreak
+
+\section{Word Embeddings --- 15 points}
+
+The questions in this section are based on material covered in Week 11.
+
+Suppose we have the following table of word co-occurrence counts, where the rows correspond to words $w$ and the columns correspond to contexts $c$:
+
+\begin{center}
+\begin{tabular}{l | r r r r r r}
+(w, c) & leash & matrix & collar & network & pet & graph \\
+\midrule
+vector & 0 & 9 & 0 & 7 & 1 & 2 \\
+walk & 6 & 1 & 3 & 2 & 1 & 2 \\
+embedding & 0 & 7 & 1 & 8 & 0 & 3 \\
+dog & 9 & 0 & 5 & 0 & 3 & 0 \\
+neural & 0 & 9 & 0 & 10 & 1 & 6 \\ 
+ball & 2 & 0 & 1 & 0 & 1 & 0 \\
+\end{tabular}
+\end{center}
+
+\subsection{}
+
+What are the pointwise mutual information (PMI) embeddings for this co-occurrence table? Show your work. You can round your answers to the hundreth place and leave blank any entires for which the PMI is undefined.
+
+\subsection{}
+
+Now use $\alpha$-smoothing with $\alpha=0.75$ to calculate positive pointwise mutual information (PPMI) embeddings for this co-occurrence table. Show your work. You can round your answers to the hundreth place.
+
+\section{Neural Networks --- 25 points}
+
+The questions in this section are based on material covered in Week 12.
+
+\subsection{The XOR Problem}
+
+Suppose we have a neural network with a hidden layer $\mathbf{h}$ defined as follows:
+\begin{center}
+\begin{tabular}{l l l l l}
+$h_1 = x_1$ & $h_2 = x_1$ & $h_3 = x_1 x_2$ & $h_4 = x_1^2$ & $h_5 = x_2^2$ \\
+\end{tabular}
+\end{center}
+
+We also have an output layer $\hat{y} = \text{RELU}(\mathbf{w} \cdot \mathbf{h} + b)$. We want to use this neural network to solve the XOR problem. Give a set of values for the parameters $\mathbf{w}$ and $b$ such that the network correctly models the XOR function. (There is more than one correct answer.) Show that using your parameter values give the correct output values.
+
+\pagebreak
+
+\subsection{Batched Forward Pass}
+
+Suppose we have the following feed-forward neural network:
+\begin{align*}
+\mathbf{H} &= \text{RELU}(\mathbf{W}_1 \cdot \mathbf{X} + \mathbf{b}_1) \\
+\mathbf{Y} &= \text{RELU}(\mathbf{W}_2 \cdot \mathbf{H} + \mathbf{b}_2) \\
+\end{align*}
+
+The network has already been trained, with parameter values
+\[
+\begin{array}{c c}
+\mathbf{W}_1 = 
+\begin{bmatrix}
+1 & -1 & 2 & 3 & 0 \\
+4 & 0 & -1 & 1 & 3 \\
+2 & 1 & 3 & -5 & -4 \\
+4 & -3 & 2 & 1 & -3 \\
+\end{bmatrix}
+&
+\mathbf{b}_1 = 
+\begin{bmatrix}
+-1 \\
+2 \\
+-4 \\
+3 \\
+\end{bmatrix} \\
+\mathbf{W}_2 = 
+\begin{bmatrix}
+2 & -1 & -1 & 3 \\
+-2 & 1 & -5 & 4 \\
+\end{bmatrix}
+&
+\mathbf{b}_b = 
+\begin{bmatrix}
+12 \\
+3 \\
+\end{bmatrix} \\
+\end{array}
+\]
+
+and input is a batch of two (column) vectors, combined into a single matrix $\mathbf{X} = 
+\begin{bmatrix}
+2 & 1 \\
+3 & 4 \\
+5 & 3 \\
+1 & 1 \\
+4 & 2 \\
+\end{bmatrix}$.
+
+\subsubsection{}
+
+What is the value of $\mathbf{H}$ after running this input batch through the trained network? Show your work.
+
+\subsubsection{}
+
+What is the value of $\mathbf{Y}$ after running this input batch through the trained network? Show your work.
+
+\pagebreak
+
+\subsection{Backpropagation}
+
+Suppose we have a neural network with a hidden layer $\mathbf{h}$ defined as follows:
+\begin{center}
+\begin{tabular}{l l l}
+$h_1 = \sigma{x_1}$ & $h_2 = a x_2 + b x_3 + c x_2 x_3$ & $h_3 = x_4^2 + d$ \\
+\end{tabular}
+\end{center}
+
+where $a, b, c, d$ are learned parameters. We also have an output layer $\hat{y} = h_1 + h_2 + h_3$. We want to train this network using some loss function $L(\hat{y})$ and learning rate $\eta = 0.1$.
+
+Suppose the current values of the parameters are
+\begin{center}
+\begin{tabular}{l l l l}
+$a = 3$ & $b = 4$ & $c = 2$ & $d = 2$ \\
+\end{tabular}
+\end{center}
+
+and we have a training input $\mathbf{x} = (0, 2, -1, 2)$.
+
+\subsubsection{}
+
+What are the values of $h_1, h_2, h_3, \hat{y}$ after running this training input through the network (ie. the forward pass of the computation graph)? Show your work. (You don't have to draw the computation graph for submission, but you might find it helpful to do so for yourself.)
+
+\subsubsection{}
+
+Suppose we have $\cfrac{\partial L}{\partial \hat{y}} = 3$. What are the values of the parameters $a, b, c, d$ after performing backpropagation (ie. the backward pass of the computation graph) and update? Show your work. (You don't have to draw the computation graph for submission, but you might find it helpful to do so for yourself.)
+
+\end{document}

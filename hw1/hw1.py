@@ -202,17 +202,17 @@ def main(corpus_path: str, delta: float, seed: int):
     # print(trigram_lm.generate_random_text(5, 0.4))
 
     print("***********")
-    unigram_lm = create_ngram_lm(1, './shakespeare.txt')
+    unigram_lm = create_ngram_lm(1, './warpeace.txt')
     for i in range(0, 5):
         print(unigram_lm.generate_random_text(10, 0.5))
 
     print("***********")
-    trigram_lm = create_ngram_lm(3, './shakespeare.txt')
+    trigram_lm = create_ngram_lm(3, './warpeace.txt')
     for i in range(0, 5):
         print(trigram_lm.generate_random_text(10, 0.5))
 
     print("***********")
-    pentagram_lm = create_ngram_lm(5, './shakespeare.txt')
+    pentagram_lm = create_ngram_lm(5, './warpeace.txt')
     for i in range(0, 5):
         print(pentagram_lm.generate_random_text(10, 0.5))
 
